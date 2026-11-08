@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 
 import { getAircraftByIcao } from '$lib/server/utils/aircraft';
-import { getAirlineByIcao } from '$lib/server/utils/airline';
+import { getAirlineByCode } from '$lib/server/utils/airline';
 import { getAirportByIata, getAirportByIcao } from '$lib/server/utils/airport';
 import { apiFlightWriter } from '$lib/server/api/v1/access';
 import { apiError, legacyApiRoute } from '$lib/server/utils/api';
@@ -11,7 +11,6 @@ import {
   saveFlightAggregate,
 } from '$lib/server/utils/flight';
 import { aircraftSchema } from '$lib/zod/aircraft';
-import { airlineSchema } from '$lib/zod/airline';
 import { flightSchema, validateFlightDepartureDate } from '$lib/zod/flight';
 
 const defaultFlight = {
@@ -62,7 +61,14 @@ const saveApiFlightSchema = flightSchema
   )
   .merge(
     z.object({
-      airline: airlineSchema.shape.icao,
+      airline: z
+        .string()
+        .max(3, 'Airline must be an ICAO or IATA code')
+        .regex(
+          /^[A-Z0-9]+$/,
+          'Airline code must contain only uppercase letters and numbers',
+        )
+        .nullable(),
     }),
   )
   .superRefine(validateFlightDepartureDate);
@@ -137,10 +143,17 @@ export const POST = legacyApiRoute(async ({ principal, event }) => {
 
   let airline;
   if (parsed.data.airline) {
-    airline = await getAirlineByIcao(parsed.data.airline);
-    if (!airline) {
+    const found = await getAirlineByCode(parsed.data.airline);
+    if (found === 'ambiguous') {
+      return apiError(
+        `Airline code ${parsed.data.airline} matches several airlines. Send the ICAO code.`,
+        400,
+      );
+    }
+    if (!found) {
       return apiError('Invalid airline');
     }
+    airline = found;
   }
 
   const data = {

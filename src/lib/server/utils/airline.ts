@@ -41,6 +41,30 @@ export const getAirlineByIata = async (
   );
 };
 
+/**
+ * An airline by its ICAO code, else by its IATA code. An ICAO match wins, so a
+ * client that sends ICAO codes gets what it got before. An IATA code counts
+ * only when one airline holds it: the database can hold several airlines with
+ * the same IATA code (Alaska Airlines and AlphaSky are both AS), and picking
+ * one of them would save the flight under the wrong airline. Such a code
+ * returns 'ambiguous'.
+ */
+export const getAirlineByCode = async (
+  input: string,
+): Promise<Airline | 'ambiguous' | null> => {
+  const byIcao = await getAirlineByIcao(input);
+  if (byIcao) return byIcao;
+
+  const byIata = await db
+    .selectFrom('airline')
+    .selectAll()
+    .where('iata', 'ilike', input)
+    .limit(2)
+    .execute();
+  if (byIata.length > 1) return 'ambiguous';
+  return byIata[0] ?? null;
+};
+
 export const getAirlineByName = async (
   input: string,
 ): Promise<Airline | null> => {

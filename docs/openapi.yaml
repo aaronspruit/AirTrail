@@ -702,7 +702,7 @@ components:
             $ref: '#/components/schemas/FlightPassengerInput'
         airline:
           type: string
-          description: 'The ICAO code of the airline.'
+          description: 'The ICAO or IATA code of the airline. An ICAO code is tried first. An IATA code that several airlines share is refused with a 400, so send the ICAO code for it.'
           example: 'BAW'
         flightNumber:
           type: string
@@ -775,7 +775,7 @@ components:
             $ref: '#/components/schemas/FlightPassengerInput'
         airline:
           type: string
-          description: 'The ICAO code of the airline.'
+          description: 'The ICAO or IATA code of the airline. An ICAO code is tried first. An IATA code that several airlines share is refused with a 400, so send the ICAO code for it.'
           example: 'BAW'
         flightNumber:
           type: string
